@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Уведомление о ПДн</title>
+  <script src="https://unpkg.com/pizzip@3.0.5/dist/pizzip.min.js"></script>
+  <script src="https://unpkg.com/docxtemplater@3.31.1/build/docxtemplater.js"></script>
+  <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+    label { display: block; margin-top: 20px; font-weight: bold; }
+    input, textarea, select { width: 100%; padding: 8px; margin-top: 5px; }
+    button { margin-top: 30px; padding: 10px 20px; font-size: 16px; margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Форма уведомления о ПДн</h1>
+  <form id="pdnForm">
+    <label>Наименование оператора</label>
+    <input name="operatorName" required>
+    <label>ИНН</label>
+    <input name="inn" required>
+    <label>ОГРН</label>
+    <input name="ogrn" required>
+    <label>Адрес оператора</label>
+    <input name="address" required>
+    <label>Цель обработки персональных данных</label>
+    <textarea name="purpose" required></textarea>
+    <label>Категории персональных данных</label>
+    <textarea name="pdnCategories" required></textarea>
+    <label>Категории субъектов</label>
+    <textarea name="subjects" required></textarea>
+    <label>Правовое основание</label>
+    <textarea name="legalBasis" required></textarea>
+    <label>Действия с ПДн</label>
+    <textarea name="actions" required></textarea>
+    <label>Способы обработки</label>
+    <textarea name="methods" required></textarea>
+    <label>Ответственный (ФИО, должность, контакты)</label>
+    <textarea name="responsible" required></textarea>
+    <label>Меры защиты</label>
+    <textarea name="securityMeasures" required></textarea>
+    <label>Дата начала обработки</label>
+    <input type="date" name="startDate" required>
+    <label>Условие прекращения обработки</label>
+    <textarea name="terminationCondition" required></textarea>
+    <label>Наличие трансграничной передачи</label>
+    <select name="crossBorder">
+      <option value="false">Нет</option>
+      <option value="true">Да</option>
+    </select>
+    <label>Местонахождение базы данных</label>
+    <input name="dbLocation" required>
+    <label>Лица, обрабатывающие ПДн по договору</label>
+    <textarea name="contractors"></textarea>
+    <button type="button" onclick="generateJSON()">Скачать JSON</button>
+    <button type="button" onclick="generateDocx()">Сформировать DOCX</button>
+  </form>
+
+  <input type="file" id="templateUpload" accept=".docx" style="margin-top:30px"/>
+  <p style="font-size: 14px;">Загрузите шаблон Word-файла (с переменными вида {{operatorName}})</p>
+
+  <script>
+    function generateJSON() {
+      const form = document.getElementById('pdnForm');
+      const formData = new FormData(form);
+      const json = {};
+      formData.forEach((value, key) => json[key] = value);
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pdn_notification.json';
+      a.click();
+    }
+
+    function generateDocx() {
+      const fileInput = document.getElementById("templateUpload");
+      const file = fileInput.files[0];
+      if (!file) return alert("Сначала загрузите шаблон .docx");
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const content = event.target.result;
+        const zip = new PizZip(content);
+        const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+        const formData = new FormData(document.getElementById("pdnForm"));
+        const data = {};
+        formData.forEach((value, key) => data[key] = value);
+        doc.setData(data);
+        try { doc.render(); }
+        catch (error) { return alert("Ошибка при генерации документа: " + error.message); }
+        const out = doc.getZip().generate({ type: "blob" });
+        saveAs(out, "Уведомление_о_ПДн.docx");
+      };
+      reader.readAsBinaryString(file);
+    }
+  </script>
+</body>
+</html>
